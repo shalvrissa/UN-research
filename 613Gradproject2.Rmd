@@ -1,0 +1,110 @@
+---
+title: "613graduate_project"
+author: "Sha Lu & Chen Zhang"
+date: "6/26/2021"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+# Goal: Through the analysis of the data set, the best relationship between several variables in the data set is obtained, and then the relationship between the relevant logical variables and numerical variables is obtained through the logical regression analysis. Specifically, we would like to explore the relationship between various indicators of each country, and we would like to know what indicators are related to the degree of development of a country.
+
+# Method: Linear regression, backward elimination, logistic regression.
+
+# Data set: This data set comes from the database on the official website of the United Nations at http://data.un.org/Default.aspx . We selected some countries from this dataset for data analysis.
+
+# Variables: 
+## a. birthrate
+## b. econactiv    	economic participation of women
+## c. contraception
+## d. literacy
+## e. lifeexpect   	life expectancy
+## f. GNP			gross national product
+## g. developing	= 1 if considered a developing country; = 0 if not considered a developing country
+## h. continent		= 1 if located in North or South Americas; = 2 if located in Africa; = 3 if located in Europe; = 4 if located in Asia, Australia or New Zealand
+## i. HDI(Human Development Indices): This indicator is used to measure the level of economic and social development of the member states of the United Nations.
+
+```{r}
+# Read the data set
+UN21<-read.csv("UN21.csv")
+head(UN21)
+summary(UN21)
+```
+# 1.Check the multicollinearity among variables (except developing and continent are ordinal variables)
+```{r}
+# Fit the model in R, we got the coefficients and F test result:
+lmfit1<-lm(HDI~.-nation-developing-continent,data=UN21)
+summary(lmfit1)
+
+
+# Then run the vif function in R:
+library(car)
+vif(lmfit1)
+```
+## a.From the result, F test is significant, but only one coefficient is remarkable, the other is not significant. 
+## b.vif > 4,it indicates multicollinearity.
+
+
+# 2. What is the best linear regression model for the data?
+```{r, warning=FALSE}
+library(MASS)
+stepAIC(lmfit1,direction="backward")
+lmfitbest<-lm(HDI~econactiv+lifeexpect,data=UN21)
+summary(lmfitbest)
+```
+## According to the result in R, the final best model is: HDI = 0.2087(econactiv) + 2.2633(lifeexpect). 
+## Prediction equation of the best model after backward elimination is y = -95.0419 + 0.2087(econativ) + 2.2633(lifeexpect)
+## Because AIC is smallest (142.84), and adj r-squared (0.7131) is better than fit1(0.6832 * R result is in problem 3).
+
+# 3. Determine if the continent and developing are associated. In another words, is the developing level of a country effected by the continent?
+```{r, warning=F}
+UN21$continent<-as.factor(UN21$continent)
+library(vcd)
+mytable<-xtabs(~developing+continent,data=UN21)
+chisq.test(mytable)
+```
+## H0: they are independent
+## Ha: they are not independent
+## According to R, the p-value is 0.0029<0.05, we reject the null hypothesis. There is no strong evidence that these two variables are independent. 
+
+# 4. Are literacy, econactiv and birthrate have a significant influence on a country's developing level?
+```{r}
+lmfit4<-glm(developing ~ econactiv  + literacy + birthrate, data=UN21,family=binomial())
+
+summary(lmfit4)
+
+lmfit5<-glm(developing ~ literacy + birthrate, data=UN21,family=binomial())
+
+summary(lmfit5)
+
+lmfit6<-glm(developing ~ econactiv + birthrate, data=UN21,family=binomial())
+
+summary(lmfit6)
+
+lmfit7<-glm(developing ~ literacy, data=UN21,family=binomial())
+
+summary(lmfit7)
+
+lmfit8<-glm(developing ~ birthrate, data=UN21,family=binomial())
+
+summary(lmfit8)
+```
+## According to R, it can be seen from the results that literacy has a significant effect on developing with the P-value is 0.015<0.05, while econactiv has no significant effect on developing with the P-value larger than 0.05. 
+
+## We can also see that in lmfit8, the P-value is 0.00659 which is less than 0.05, and P-value is 0.0090 in lmfit7.
+
+## It can be seen from the above data that education level and birth rate are respectively related to the development level of a country. However, when the independent variables are education level and birth rate, their impact on national development is not significant.
+
+## In general, birth rate affects the development of a country, but the level of education has a decisive impact on the development of a country.
+
+
+# 5. Future research
+## First, we can consider the relationship between lifeexpect and developing to determine whether the lifeexpect of developed countries is higher than that of developing countries. Because normally, the lifetime in developed countries is longer than developing counties due to better living environment and medical conditions etc. Therefore, we could research this and see if we can get statistical support.
+
+## In addition, we can analyze the influencing factors that affect lifeexpect, and adjust according to these influencing factors, so as to achieve the purpose of increasing human life expectancy.
+
+## Finally, we can also explore the impact of contraception and other related factors on life expectancy. In different countries, the population base is different. Since contemporary young people's life is stressful, they are more and more reluctant to have children and raise children, which makes the problem of population aging continue to expand and may also lead to the fluctuation of happiness index.
+
+
+
+
